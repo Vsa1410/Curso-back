@@ -67,7 +67,30 @@ app.get("/profile", authenticateToken, async (req, res) =>{
     }
 })
 
-//Rotas criaçao de novos cursos
+//Courses routes
+app.get("/course", async(req, res) =>{
+    try {
+        const course = await prisma.course.findMany()
+        res.json(course)
+    } catch (error) {
+        res.status(500).json({ error: "Erro ao carregar os cursos"})
+    }
+});
+
+app.get("course/:id" , async(req,res) =>{
+    
+    try {
+        const {id} = req.params
+        const course = await prisma.course.findUnique({where :{
+            id : id
+        }})    
+        res.json(course)
+    } catch (error) {
+        res.status(404).json( {error : "Erro ao encontrar o curso"})
+        
+    }
+})
+
 app.post("/course" , async(req, res) => {
     const { title, description, category, creatorId} = req.body;
     
@@ -81,5 +104,10 @@ app.post("/course" , async(req, res) => {
         res.status(500).json({error: "Error creating a new course" })
     }
 })
+
+
+//modules routes
+
+
 
 app.listen(3000, () => console.log ("Server is Running on port 3000"))
