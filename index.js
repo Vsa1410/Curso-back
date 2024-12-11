@@ -77,10 +77,10 @@ app.get("/course", async(req, res) =>{
     }
 });
 
-app.get("course/:id" , async(req,res) =>{
+app.get("/course/:id" , async(req,res) =>{
     
     try {
-        const {id} = req.params
+        const id = Number(req.params.id)
         const course = await prisma.course.findUnique({where :{
             id : id
         }})    
@@ -105,8 +105,42 @@ app.post("/course" , async(req, res) => {
     }
 })
 
+app.delete("/course/:id", async(req,res) =>{
+    const id = Number(req.params.id)
+    console.log(req.params.id)
+    try {
+        const courseDelete = await prisma.course.delete({
+            where:{
+            id:id
+            }
+        })
+        res.json(courseDelete)
+    } catch (error) {
+        
+    }
+})
+
+app.put("/course/:id" , async(req, res) => {
+    const id = Number(req.params.id)
+    
+    const { title, description, category, creatorId} = req.body;
+    
+    try {
+        const updateCourse = await prisma.course.update({
+            where:{
+                id:id
+            },
+            data: {title, description, category, creatorId}
+
+        })
+        res.json(updateCourse)
+    } catch (error) {
+        res.status(500).json({error: "Error updating a new course" })
+    }
+})
 
 //modules routes
+
 
 
 
