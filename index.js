@@ -81,8 +81,13 @@ app.get("/course/:id" , async(req,res) =>{
     
     try {
         const id = Number(req.params.id)
-        const course = await prisma.course.findUnique({where :{
+        const course = await prisma.course.findUnique({
+            include:{
+                modules: true
+            },
+            where :{
             id : id
+            
         }})    
         res.json(course)
     } catch (error) {
@@ -141,7 +146,34 @@ app.put("/course/:id" , async(req, res) => {
 
 //modules routes
 
+app.post("/module", async(req, res)=>{
+    const {title, content, courseId} = req.body
 
+    try {
+        const newModule = await prisma.module.create({
+           data:
+           { title : title,
+            courseId :courseId,
+            content : content
+           }
+
+        })
+        
+        res.json(newModule)
+
+    } catch (error) {
+        res.status(404).json({err: "Can't create a new module"})
+    }
+})
+
+app.get("/module", async(req, res)=>{
+    const modules = await prisma.module.findMany()
+    try {
+        res.json(modules)
+    } catch (error) {
+        
+    }
+})
 
 
 app.listen(3000, () => console.log ("Server is Running on port 3000"))
