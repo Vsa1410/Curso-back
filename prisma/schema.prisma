@@ -14,24 +14,28 @@ datasource db {
 }
 
 model User {
-  id       Int      @id @default(autoincrement())
-  name     String
-  email    String   @unique
-  password String
-  createdAt DateTime @default(now())
-  courses  Course[]
+  id              Int      @id @default(autoincrement())
+  name            String
+  email           String   @unique
+  password        String
+  birthday        DateTime 
+  createdAt       DateTime @default(now())
+  updatedAt       DateTime  @updatedAt
+  courses         Course[]  @relation("TeacherCourses")
+  enrolledCOurses EnrolledCourse[]
 }
 
 model Course {
-  id        Int      @id @default(autoincrement())
-  title     String
-  description String?
-  category  String
-  createdAt DateTime @default(now())
-  updatedAt DateTime @updatedAt
-  modules   Module[]
-  creator   User     @relation(fields: [creatorId], references: [id])
-  creatorId Int
+  id               Int      @id @default(autoincrement())
+  title            String
+  description      String?
+  category         String
+  createdAt        DateTime @default(now())
+  updatedAt        DateTime @updatedAt
+  modules          Module[]
+  creator          User     @relation("TeacherCourses", fields: [creatorId], references: [id])
+  creatorId        Int
+  enrolledStudents EnrolledCourse[]
 }
 
 model Module {
@@ -40,4 +44,22 @@ model Module {
   content   String   // URL de vídeo ou texto
   course    Course   @relation(fields: [courseId], references: [id])
   courseId  Int
+}
+
+model EnrolledCourse {
+  id        Int     @id @default(autoincrement())
+  userId    Int
+  courseId  Int
+  enrolledAt DateTime @default(now())
+
+  user   User   @relation(fields: [userId], references: [id])
+  course Course @relation(fields: [courseId], references: [id])
+
+  @@unique([userId, courseId]) // Impede duplicidade na inscrição
+}
+
+enum Role {
+  USER    // Representa um aluno
+  TEACHER // Representa um professor
+  ADMIN   // Representa um administrador
 }

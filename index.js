@@ -56,16 +56,21 @@ app.post("/login", async (req, res) => {
     }
 })
 
-// Rota protegida
-
 app.get("/profile", authenticateToken, async (req, res) =>{
     try {
-        const user = await prisma.user.findUnique({where: {id: req.user.id}});
-        res.json(user);
-    } catch (err) {
-        res.status(500).json({ error: "Erro ao carregar pagina"})
+        const user = await prisma.user.findUnique({ 
+            include: {
+                courses: true
+            },
+            where:{
+            id: req.user.id
+        }})
+        res.json(user)
+    } catch (error) {
+        res.status(500).json({ error: "Erro finding profile"})
     }
 })
+
 
 //Courses routes
 app.get("/course", async(req, res) =>{
@@ -174,6 +179,38 @@ app.get("/module", async(req, res)=>{
         
     }
 })
+
+app.get("/module/:id" , async(req,res) =>{
+    
+    try {
+        const id = Number(req.params.id)
+        const moduleFind = await prisma.module.findUnique({
+            where :{
+            id : id
+            
+        }})    
+        res.json(moduleFind)
+    } catch (error) {
+        res.status(404).json( {error : "Erro ao encontrar o modulo"})
+        
+    }
+})
+
+app.delete("/module/:id", async(req,res) =>{
+    const id = Number(req.params.id)
+    console.log(req.params.id)
+    try {
+        const moduleDelete = await prisma.module.delete({
+            where:{
+            id:id
+            }
+        })
+        res.json(moduleDelete)
+    } catch (error) {
+        
+    }
+})
+
 
 
 app.listen(3000, () => console.log ("Server is Running on port 3000"))
