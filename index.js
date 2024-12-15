@@ -3,32 +3,61 @@ const { PrismaClient } = require("@prisma/client");
 const authenticateToken = require("./middlewares/authmiddleware");
 const bcrypt = require("bcryptjs");
 const jwt = require("jsonwebtoken");
+const momentjs = require("moment");
+const verifyEnrollment = require("./verifymiddleware");
+const verifyModuleAccess = require("./middlewares/verifymodulemiddleware");
 
 const app = express();
 const prisma = new PrismaClient();
 
 app.use(express.json())
 
+
+//users routes
 app.get("/users", async (req, res) =>{
     const users = await prisma.user.findMany();
     res.json(users);
 });
 
-app.post("/register", async (req, res)=>{
-    const { name, email, password} = req.body;
+app.post("/users", async (req, res)=>{
+    const { name, email, password, birthday, role } = req.body;
 
     try{
         const hashedPassword = await bcrypt.hash(password, 10);
-        console.log(1)
+        const birthdayDate = momentjs(birthday, "DD/MM/YYYY").toISOString()
+       
 
         const newUser = await prisma.user.create({
-            data: {name, email, password: hashedPassword},
+            data: {name, email, password: hashedPassword, birthday: birthdayDate, role},
 
         })
         res.status(201).json({newUser, message: "Usuario registrado com sucesso"})
 
     }catch (err){
         res.status(400).json({ error: "Erro ao registrar o Usuário"})
+    }
+});
+
+app.put("/users/", authenticateToken, async (req, res)=>{
+    const { name, email, password, birthday, role} = req.body;
+    const id = Number(req.user.id)
+    try{
+        const hashedPassword = await bcrypt.hash(password, 10);
+        const birthdayDate = momentjs(birthday, "DD/MM/YYYY").toISOString()
+
+        const user = await prisma.user.update({
+            where:{
+                id:id
+            },
+            data: {
+                name, email, password: hashedPassword, birthday: birthdayDate, role
+            },
+
+        })
+        res.status(201).json({user, message: "Usuario atualizado com sucesso com sucesso"})
+
+    }catch (err){
+        res.status(400).json({ error: "Erro ao atualizar o Usuário"})
     }
 });
 
@@ -82,31 +111,38 @@ app.get("/course", async(req, res) =>{
     }
 });
 
-app.get("/course/:id" , async(req,res) =>{
-    
+app.get("/courses/:courseId/modules", authenticateToken, verifyEnrollment, async (req, res) => {
+    const courseId = parseInt(req.params.courseId, 10);
+  
     try {
-        const id = Number(req.params.id)
-        const course = await prisma.course.findUnique({
-            include:{
-                modules: true
-            },
-            where :{
-            id : id
-            
-        }})    
-        res.json(course)
-    } catch (error) {
-        res.status(404).json( {error : "Erro ao encontrar o curso"})
-        
+      // Busca os módulos do curso
+      const modules = await prisma.module.findMany({
+        where: { courseId },
+      });
+  
+      res.json(modules);
+    } catch (err) {
+      res.status(500).json({ error: "Erro ao buscar os módulos do curso." });
     }
-})
+  });
 
-app.post("/course" , async(req, res) => {
-    const { title, description, category, creatorId} = req.body;
+
+app.post("/course" , authenticateToken, async(req, res) => {
+    const { title, description, category} = req.body;
     
+    if (req.user.role !== "TEACHER" && req.user.role !== "ADMIN") {
+        return res.status(403).json({ error: "Apenas professores ou administradores podem criar novos cursos"})
+    }
+
+
     try {
         const newCourse = await prisma.course.create({
-            data: {title, description, category, creatorId},
+            data: {
+                title, 
+                description, 
+                category,
+                creatorId: req.user.id
+            },
 
         })
         res.json(newCourse)
@@ -180,13 +216,14 @@ app.get("/module", async(req, res)=>{
     }
 })
 
-app.get("/module/:id" , async(req,res) =>{
-    
+app.get("/module/:id" ,authenticateToken, verifyModuleAccess, async(req,res) =>{
+    const moduleId = parseInt(req.params.id, 10);
+
     try {
-        const id = Number(req.params.id)
+        
         const moduleFind = await prisma.module.findUnique({
             where :{
-            id : id
+            id : moduleId
             
         }})    
         res.json(moduleFind)
@@ -210,6 +247,68 @@ app.delete("/module/:id", async(req,res) =>{
         
     }
 })
+
+// enroll course
+
+app.post("/course/:courseId/enroll" ,authenticateToken, async(req, res) => {
+
+    const courseId = parseInt(req.params.courseId, 10);
+    const user = await prisma.user.findUnique({
+        where: {
+            id: req.user.id
+        }
+    })
+    console.log(user.role)
+
+    if (user.role !== "USER") {
+    return res.status(403).json({error: "Only students can subscribe"});
+    }
+
+    try {
+        const course = await prisma.course.findUnique({where: {id: courseId} })
+        if(!course){
+            return res.status(404).json({error: "Error finding the course"})
+        }
+    
+
+    const enrollment = await prisma.enrolledCourse.create({
+        data:{
+            userId: req.user.id,
+            courseId,
+        }
+    });
+
+    res.status(200).json({message: "Sucess!!", enrollment})
+    }catch (err){
+        res.status(500).json({error: "Can't make the enrollment"})
+    }
+})
+
+// find enrolled courses
+app.get("/mycourses", authenticateToken, async (req, res) => {
+
+    const user = await prisma.user.findUnique({
+        where:{
+            id: req.user.id
+            }
+        
+    })
+
+    if (user.role !== "USER") {
+      return res.status(403).json({ error: "Somente alunos podem acessar seus cursos." });
+    }
+  
+    try {
+      const enrolledCourses = await prisma.enrolledCourse.findMany({
+        where: { userId: req.user.id },
+        include: { course: true }, // Inclui os detalhes do curso
+      });
+  
+      res.json(enrolledCourses.map((enrollment) => enrollment.course));
+    } catch (err) {
+      res.status(500).json({ error: "Erro ao buscar cursos." });
+    }
+  });
 
 
 

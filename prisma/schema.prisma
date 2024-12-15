@@ -14,14 +14,14 @@ datasource db {
 }
 
 model User {
-  id              Int      @id @default(autoincrement())
+  id              Int       @id @default(autoincrement())
   name            String
-  email           String   @unique
+  email           String    @unique
   password        String
   role            Role      @default(USER)
-  birthday        DateTime 
-  createdAt       DateTime @default(now())
-  updatedAt       DateTime  @updatedAt
+  birthday        DateTime? 
+  createdAt       DateTime  @default(now())
+  updatedAt       DateTime?  @updatedAt
   courses         Course[]  @relation("TeacherCourses")
   enrolledCOurses EnrolledCourse[]
 }

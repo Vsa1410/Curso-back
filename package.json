@@ -12,8 +12,10 @@
   "dependencies": {
     "@prisma/client": "^6.0.1",
     "bcryptjs": "^2.4.3",
+    "dayjs": "^1.11.13",
     "express": "^4.21.2",
     "jsonwebtoken": "^9.0.2",
+    "moment": "^2.30.1",
     "prisma": "^6.0.1"
   }
 }
