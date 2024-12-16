@@ -43,6 +43,7 @@ model Module {
   id        Int      @id @default(autoincrement())
   title     String
   content   String   // URL de vídeo ou texto
+  text      String?
   course    Course   @relation(fields: [courseId], references: [id])
   courseId  Int
 }

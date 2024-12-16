@@ -85,7 +85,7 @@ app.post("/login", async (req, res) => {
     }
 })
 
-app.get("/profile", authenticateToken, async (req, res) =>{
+app.get("/users/me", authenticateToken, async (req, res) =>{
     try {
         const user = await prisma.user.findUnique({ 
             include: {
@@ -96,7 +96,7 @@ app.get("/profile", authenticateToken, async (req, res) =>{
         }})
         res.json(user)
     } catch (error) {
-        res.status(500).json({ error: "Erro finding profile"})
+        res.status(500).json({ error: "Error finding profile"})
     }
 })
 
@@ -151,20 +151,24 @@ app.post("/course" , authenticateToken, async(req, res) => {
     }
 })
 
-app.delete("/course/:id", async(req,res) =>{
-    const id = Number(req.params.id)
-    console.log(req.params.id)
+app.delete("/course/:id", authenticateToken, async (req, res) => {
+    const courseId = parseInt(req.params.id, 10);
+  
     try {
-        const courseDelete = await prisma.course.delete({
-            where:{
-            id:id
-            }
-        })
-        res.json(courseDelete)
-    } catch (error) {
-        
+      const course = await prisma.course.findUnique({ where: { id: courseId } });
+      if (!course) return res.status(404).json({ error: "Curso não encontrado." });
+  
+      await prisma.$transaction([
+        prisma.module.deleteMany({ where: { courseId } }),
+        prisma.enrolledCourse.deleteMany({ where: { courseId } }),
+        prisma.course.delete({ where: { id: courseId } }),
+      ]);
+  
+      res.json({ success: true, message: "Curso excluído com sucesso." });
+    } catch (err) {
+      res.status(500).json({ error: "Erro ao excluir o curso." });
     }
-})
+  });
 
 app.put("/course/:id" , async(req, res) => {
     const id = Number(req.params.id)
@@ -188,14 +192,15 @@ app.put("/course/:id" , async(req, res) => {
 //modules routes
 
 app.post("/module", async(req, res)=>{
-    const {title, content, courseId} = req.body
+    const {title, content, courseId, text} = req.body
 
     try {
         const newModule = await prisma.module.create({
            data:
            { title : title,
             courseId :courseId,
-            content : content
+            content : content,
+            text,
            }
 
         })
@@ -206,6 +211,22 @@ app.post("/module", async(req, res)=>{
         res.status(404).json({err: "Can't create a new module"})
     }
 })
+
+app.put("/module/:id", authenticateToken, async (req, res) => {
+    const moduleId = parseInt(req.params.id, 10);
+    const { title, content, text } = req.body;
+  
+    try {
+      const updatedModule = await prisma.module.update({
+        where: { id: moduleId },
+        data: { title, content, text },
+      });
+  
+      res.json(updatedModule);
+    } catch (err) {
+      res.status(404).json({ error: "Erro ao atualizar o módulo." });
+    }
+  });
 
 app.get("/module", async(req, res)=>{
     const modules = await prisma.module.findMany()
@@ -250,7 +271,7 @@ app.delete("/module/:id", async(req,res) =>{
 
 // enroll course
 
-app.post("/course/:courseId/enroll" ,authenticateToken, async(req, res) => {
+app.post("/course/:courseId/enrollments" ,authenticateToken, async(req, res) => {
 
     const courseId = parseInt(req.params.courseId, 10);
     const user = await prisma.user.findUnique({
@@ -310,6 +331,20 @@ app.get("/mycourses", authenticateToken, async (req, res) => {
     }
   });
 
+app.get("/createdCourses" , authenticateToken, async(req,res)=>{
+    try {
+        const created = await prisma.course.findMany({
+            where: {
+                creatorId : req.user.id
+            }
+        })
+        res.json(created)
+    } catch (error) {
+
+        res.status(500).json({error: "Can't find the courses"})
+        
+    }
+})
 
 
 app.listen(3000, () => console.log ("Server is Running on port 3000"))
