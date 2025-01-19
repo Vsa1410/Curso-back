@@ -21,6 +21,7 @@ app.get("/users", async (req, res) =>{
 
 app.post("/users", async (req, res)=>{
     const { name, email, password, birthday, role } = req.body;
+    
 
     try{
         const hashedPassword = await bcrypt.hash(password, 10);
@@ -34,7 +35,24 @@ app.post("/users", async (req, res)=>{
         res.status(201).json({newUser, message: "Usuario registrado com sucesso"})
 
     }catch (err){
-        res.status(400).json({ error: "Erro ao registrar o Usuário"})
+        if (err.code === 'P2002' && err.meta.target.includes('email')) {
+            // Tratando erro de email duplicado
+            return res.status(409).json({
+                error: 'O email já está cadastrado. Por favor, use outro.',
+            });
+        }
+
+        if (err.code === 'P1001'){
+            return res.status(400).json({
+                error: 'Erro de servidor'
+            })
+        }
+            
+        
+        else{
+
+            res.status(400).json({ error: "Erro ao registrar o Usuário"})
+        }
     }
 });
 
