@@ -6,12 +6,12 @@ const jwt = require("jsonwebtoken");
 const momentjs = require("moment");
 const verifyEnrollment = require("./verifymiddleware");
 const verifyModuleAccess = require("./middlewares/verifymodulemiddleware");
+const cors = require('cors');
 
 const app = express();
 const prisma = new PrismaClient();
 
 
-const cors = require('cors');
 
 
 
