@@ -10,7 +10,7 @@ const verifyModuleAccess = require("./middlewares/verifymodulemiddleware");
 const app = express();
 const prisma = new PrismaClient();
 
-const express = require('express');
+
 const cors = require('cors');
 
 
