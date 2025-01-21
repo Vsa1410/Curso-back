@@ -100,11 +100,12 @@ app.post("/login", async (req, res) => {
         if(!validPassword) return res.status(401).json({ error: "Senha incorreta"})
             
             const token = jwt.sign(
-                {id: user.id, name: user.name, email: user.email},
+                {id: user.id, name: user.name, email: user.email, role: user.role},
                 process.env.JWT_SECRET,
 
             )
             res.json({ token, message :"Sucessful Login"})
+            
     }catch(err){
         res.status(500).json({ error: "Server Error"})
     }
